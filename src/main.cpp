@@ -1,27 +1,59 @@
 #include <SPI.h>
 #include <RF24.h>
-#include <BTLE.h>
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 #include <avr/power.h>
 
-#define NRF_CE_PIN 9
-#define NRF_CSN_PIN 10
+#define NRF_CE_PIN      9
+#define NRF_CSN_PIN     10
+#define NRF_CHANNEL     120
+#define NRF_BROADCAST_ADDRESS  "rf24se"
+
+//#define NODEBUG_PRINT
 
 RF24 radio(NRF_CE_PIN,NRF_CSN_PIN);
-BTLE btle(&radio);
+unsigned char address[7] = NRF_BROADCAST_ADDRESS;
 
-char deviceSignature[7] = "HCTR--";
-char deviceType = 'A';
-char deviceNum = 'A';
+// when changing RFPacket structure be aware of potential padding bytes
+// as it does not have to be the same on all platforms
+struct RFPacket {
+    uint32_t seqno;
+    unsigned char deviceType;
+    unsigned char deviceId;
+    unsigned char deviceSubId;
+    unsigned char payload[25];
+};
+
+RFPacket buffer;
 
 void setup() {
-    Serial.begin(9600);
+    #ifndef NODEBUG_PRINT
+    Serial.begin(115200);
     while (!Serial) { }
-    Serial.println("BTLE advertisement sender");
-    deviceSignature[4] = deviceType;
-    deviceSignature[5] = deviceNum;
-    btle.begin(deviceSignature);
+    Serial.println("RF24 sensor");
+    delay(100); 
+    #endif
+
+    if (!radio.begin()){
+        //TODO Handle error
+    }
+    radio.setAutoAck(false); // disable auto-ack from receivers
+    radio.setChannel(NRF_CHANNEL); 
+    radio.setCRCLength(RF24_CRC_16); // set CRC length
+    radio.setPALevel(RF24_PA_MAX); // set power level
+    radio.setRetries(0,0); // disable auto-retries
+    radio.setDataRate(RF24_250KBPS); // set datarate to 250kbps to enhance range
+    radio.openWritingPipe(address);
+
+    buffer.deviceId = 1;
+    buffer.deviceSubId = 0;
+    buffer.deviceType = 1;
+    
+
+    #ifndef NODEBUG_PRINT
+    radio.printPrettyDetails();
+    #endif
+    
 }
 
 // watchdog interrupt
@@ -30,7 +62,6 @@ ISR(WDT_vect){
 }
 
 void sleepNow(const byte interval) {  
-    Serial.println("going to sleep");
     digitalWrite(13, LOW);                 // turn off LED13 status on-board LED
     unsigned char spi_save = SPCR;
     SPCR = 0;                // disable SPI
@@ -58,31 +89,25 @@ void sleepNow(const byte interval) {
     SPCR = spi_save;            // restore SPI
 }
 
-int i = 0;
-float temp=30;
-nrf_service_data buf;
-char buf2[8] = "HCTRBK";
+#define DEEP_SLEEP_INTERVAL_MULTIPLE    1
 
-void loop() {  
+void loop() {
     radio.powerUp();
-    bool a = btle.advertise(0x16, &buf2, sizeof(buf2));
-    delay(1000);
-    a = btle.advertise(0x16, &buf2, sizeof(buf2));
-    
-    btle.hopChannel();
-    btle.hopChannel();
-    if (!a) Serial.print("e");
-    else Serial.print(".");
-    delay(1000);
-    i++;
-    if (i>50){
-        Serial.println();
-        i=0;
+    buffer.seqno = millis();
+
+    for (char i=0;i<3;i++) {
+        radio.writeFast(&buffer,sizeof(buffer));
+        delay(10);
     }
     radio.powerDown();
 
-    // sleep for a total of Nx8 seconds
-    for (char i=0;i<2;i++)
-        sleepNow(0b100001);  // 8 seconds
-    
+    #ifndef NODEBUG_PRINT
+    Serial.println(buffer.seqno);
+    Serial.println("going to sleep");
+    delay(20);
+    #endif
+
+
+    for (char i=0;i<DEEP_SLEEP_INTERVAL_MULTIPLE;i++) sleepNow(0b100001);  // 8 seconds
+    //delay(1000); // artificial delay for testing
 }
