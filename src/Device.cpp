@@ -95,7 +95,7 @@ void Device::normalMode(){
     Serial.print("[device] ms=");
     Serial.print(buffer.seqno);
     Serial.print(" button=");
-    Serial.print(digitalRead(BUTTON_PIN));
+    Serial.print(!button.isOpen());
     Serial.print(" vcc=");
     Serial.print(vcc);
     Serial.print(" vcc%=");
@@ -116,7 +116,7 @@ void Device::normalMode(){
     #endif
 
     radio.powerDown();
-    for (int i=0; i < DEEP_SLEEP_INTERVAL_MULTIPLE; i++) sleep8s();  // sleep 8 seconds
+    for (int i=0; i < DEEP_SLEEP_INTERVAL_MULTIPLE; i++) sleep(SleepDuration::DUR_8s);  // sleep 8 seconds
     // delay(1000); // artificial delay for testing
 }
 
