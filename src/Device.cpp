@@ -16,6 +16,7 @@ Device::Device(){
     radio.setDataRate(RF24_250KBPS); // set datarate to 250kbps to enhance range
     radio.openWritingPipe(RF24BR_BRIDGE_ADDRESS);
     radio.openReadingPipe(0,RF24BR_ACTUATOR_ADDRESS);
+    radio.startListening();
 
     #ifndef NODEBUG_PRINT
     radio.printPrettyDetails();
@@ -31,8 +32,6 @@ Device::Device(){
         #ifndef NODEBUG_PRINT
         Serial.println("Config mode");
         #endif
-        radio.powerUp();
-        radio.startListening();
     } else {
         #ifndef NODEBUG_PRINT
         Serial.println("Normal mode");
@@ -76,12 +75,14 @@ uint16_t Device::getDeviceId(){
 }
 
 void Device::sendBuffer(){
+    radio.stopListening();
     buffer.seqno = millis();
 
     for (int i=0;i<3;i++) {
         radio.writeFast(&buffer,sizeof(buffer));
         delay(10);
     }
+    radio.startListening();
 }
 
 void Device::normalMode(){
@@ -115,15 +116,15 @@ void Device::normalMode(){
     #endif
 
     radio.powerDown();
-    //for (int i=0; i < DEEP_SLEEP_INTERVAL_MULTIPLE; i++) sleep8s();  // sleep 8 seconds
-    delay(1000); // artificial delay for testing
+    for (int i=0; i < DEEP_SLEEP_INTERVAL_MULTIPLE; i++) sleep8s();  // sleep 8 seconds
+    // delay(1000); // artificial delay for testing
 }
 
 void Device::configMode(){
     #ifndef NODEBUG_PRINT
     if (millis()-aliveTimer>5000 ){
         aliveTimer = millis();
-        Serial.print("[device] ms=");
+        Serial.print("[device-cfg] ms=");
         Serial.print(aliveTimer);
         Serial.println(" is alive");
     }
@@ -131,10 +132,21 @@ void Device::configMode(){
     if (radio.available()){
         RFActuatorPacket p;
         radio.read(&p,sizeof(p));
+        #ifndef NODEBUG_PRINT
+        Serial.print("data received ");
+        Serial.print(p.pktType);
+        Serial.print(" ");
+        Serial.print(p.dstAdr,HEX);
+        Serial.println();
+        #endif
+
         if (p.pktType == RFPacketType::SCAN){
             memcpy(buffer.payload, p.payload, sizeof(buffer.payload));
             // announce all sensors
             ListEntry<Sensor>* i = sensors.getList();
+            #ifndef NODEBUG_PRINT
+            Serial.println("Announcing sensors");
+            #endif
             while (i) {
                 i->entry->announce(buffer);
                 sendBuffer();
