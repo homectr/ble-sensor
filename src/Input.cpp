@@ -21,7 +21,8 @@ void InputBinary::loop(){
     if (_isOpen != _p){
         debounceTimerOn = true;
         debounceTimer = millis();
-        if (inverse)
+        stateStart = millis();
+        if (inverse) 
             _isOpen = _p;
         else
             _isOpen = !_p;

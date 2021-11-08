@@ -92,3 +92,7 @@ void sleep(SleepDuration sleepDur) {
     power_all_enable();
     SPCR = spi_save;            // restore SPI
 }
+
+void reboot() {
+  asm volatile ("jmp 0");
+}

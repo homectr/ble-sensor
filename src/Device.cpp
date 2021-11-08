@@ -164,6 +164,12 @@ void Device::configMode(){
 
 void Device::loop(){
     button.loop();
+    if (!button.isOpen() && button.stateDuration() > 10000) {
+        #ifndef NODEBUG_PRINT
+        Serial.println("Rebooting");
+        #endif
+        reboot();
+    }
     indicator.loop();
     if (isConfigMode) configMode();
     else normalMode();

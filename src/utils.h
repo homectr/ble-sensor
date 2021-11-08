@@ -18,4 +18,8 @@ uint32_t crc32(void* buff, size_t length);
 // Arduino VCC voltage in mV
 uint16_t readVCC(); 
 
+// puts Arduino into deep-sleep
 void sleep(SleepDuration sleepDur);
+
+// restarts Arduino
+void reboot();
