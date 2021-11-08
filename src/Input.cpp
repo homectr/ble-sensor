@@ -2,10 +2,13 @@
 
 //#define NODEBUG_PRINT
 
-InputBinary::InputBinary(unsigned char pin, bool inverse){
+InputBinary::InputBinary(unsigned char pin, bool pullup){
     this->pin = pin;
-    this->inverse = inverse;
-    pinMode(pin,INPUT_PULLUP);
+    this->inverse = pullup;
+    if (pullup)
+        pinMode(pin,INPUT_PULLUP);
+    else
+        pinMode(pin,INPUT);
 }
 
 bool InputBinary::isOpen(){
@@ -14,13 +17,14 @@ bool InputBinary::isOpen(){
 
 void InputBinary::loop(){
     if (debounceTimerOn && millis()-debounceTimer < debounceTimeout) return;
-    if (_isOpen != digitalRead(pin)){
+    bool _p = digitalRead(pin);
+    if (_isOpen != _p){
         debounceTimerOn = true;
         debounceTimer = millis();
         if (inverse)
-            _isOpen = digitalRead(pin);
+            _isOpen = _p;
         else
-            _isOpen = !digitalRead(pin);
+            _isOpen = !_p;
         #ifndef NODEBUG_PRINT
         Serial.print("[Input] ms= ");
         Serial.print(millis());

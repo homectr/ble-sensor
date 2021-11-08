@@ -8,20 +8,18 @@ enum RFSensorType: uint8_t {
 };
 
 enum RFPacketType: uint8_t {
-    PAIRING,
+    SCAN,
     DATA
 };
-
-using RFPayload = unsigned char[22];
 
 // when changing RFPacket structure be aware of potential padding bytes
 // as it does not have to be the same on all platforms
 struct RFSensorPacket {
     uint32_t seqno;
     uint32_t srcAdr;
-    RFSensorType itemType;
+    RFSensorType sensorType;
     uint8_t vcc;
-    RFPayload payload;
+    uint8_t payload[22];
 };
 
 struct RFActuatorPacket {

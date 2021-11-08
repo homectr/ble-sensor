@@ -4,7 +4,8 @@
 #include <RF24.h>
 #include "Input.h"
 #include "RFPacket.h"
-#include "Sensor.h"
+#include "Item.h"
+#include "List.h"
 
 #define BUTTON_PIN      7
 
@@ -23,11 +24,11 @@ class Device {
         uint16_t deviceId;
         unsigned long aliveTimer = 0;
 
-        InputBinary button = InputBinary(BUTTON_PIN);
+        InputBinary button = InputBinary(BUTTON_PIN,true);
         RF24 radio = RF24(NRF_CE_PIN,NRF_CSN_PIN);
         RFSensorPacket buffer;
 
-        SensorTempDHT21 *temp = nullptr;
+        List<Sensor> sensors = List<Sensor>();
 
     protected: 
         uint16_t getDeviceId();

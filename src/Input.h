@@ -12,7 +12,7 @@ class InputBinary {
     bool _isOpen = true;
 
     public:
-        InputBinary(unsigned char pin, bool inverse = false);
+        InputBinary(unsigned char pin, bool pullup = false);
         bool isOpen();
         void loop();
 };

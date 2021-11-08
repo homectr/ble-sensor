@@ -3,7 +3,7 @@
 
 //#define NODEBUG_PRINT
 
-Device device;
+Device* device;
 
 void setup() {
     #ifndef NODEBUG_PRINT
@@ -12,7 +12,7 @@ void setup() {
     Serial.println("RF24 sensor");
     #endif
     delay(1000); 
-   
+    device = new Device();
 }
 
 // watchdog interrupt
@@ -21,5 +21,5 @@ ISR(WDT_vect){
 }
 
 void loop() {
-    device.loop();
+    device->loop();
 }

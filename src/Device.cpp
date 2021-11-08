@@ -4,6 +4,7 @@
 
 Device::Device(){
     deviceId = getDeviceId();
+    button.loop();
     isConfigMode = !button.isOpen();
     radio.begin();
 
@@ -20,13 +21,22 @@ Device::Device(){
     radio.printPrettyDetails();
     #endif
 
-    buffer.srcAdr = deviceId << 16; // deviceId is in two uppoer bytes
+    buffer.srcAdr = deviceId; 
+    buffer.srcAdr <<= 16; // deviceId is in two uppoer bytes
 
-    temp = new SensorTempDHT21(deviceId,0x0001,8);
+    Sensor *sensor = new SensorTempDHT21(0x0001,8);
+    sensors.add(sensor);
 
     if (isConfigMode) {
+        #ifndef NODEBUG_PRINT
+        Serial.println("Config mode");
+        #endif
         radio.powerUp();
         radio.startListening();
+    } else {
+        #ifndef NODEBUG_PRINT
+        Serial.println("Normal mode");
+        #endif
     }
 
 }
@@ -80,16 +90,24 @@ void Device::normalMode(){
     uint32_t vcc = readVCC();
     buffer.vcc = vcc/33;
 
-    temp->read(buffer);
-    sendBuffer();
     #ifndef NODEBUG_PRINT
     Serial.print("[device] ms=");
     Serial.print(buffer.seqno);
+    Serial.print(" button=");
+    Serial.print(digitalRead(BUTTON_PIN));
     Serial.print(" vcc=");
     Serial.print(vcc);
     Serial.print(" vcc%=");
     Serial.println(buffer.vcc);
-    #endif    
+    #endif
+
+    // send measurements from all sensors
+    ListEntry<Sensor>* i = sensors.getList();
+    while (i) {
+        i->entry->read(buffer);
+        sendBuffer();
+        i = i->next;
+    }
 
     #ifndef NODEBUG_PRINT
     Serial.println("[device] ...going to sleep");
@@ -97,8 +115,8 @@ void Device::normalMode(){
     #endif
 
     radio.powerDown();
-    for (int i=0; i < DEEP_SLEEP_INTERVAL_MULTIPLE; i++) sleep8s();  // sleep 8 seconds
-    //delay(1000); // artificial delay for testing
+    //for (int i=0; i < DEEP_SLEEP_INTERVAL_MULTIPLE; i++) sleep8s();  // sleep 8 seconds
+    delay(1000); // artificial delay for testing
 }
 
 void Device::configMode(){
@@ -111,11 +129,24 @@ void Device::configMode(){
     }
     #endif
     if (radio.available()){
-
+        RFActuatorPacket p;
+        radio.read(&p,sizeof(p));
+        if (p.pktType == RFPacketType::SCAN){
+            memcpy(buffer.payload, p.payload, sizeof(buffer.payload));
+            // announce all sensors
+            ListEntry<Sensor>* i = sensors.getList();
+            while (i) {
+                i->entry->announce(buffer);
+                sendBuffer();
+                i = i->next;
+            }
+            
+        }
     }
 }
 
 void Device::loop(){
+    button.loop();
     if (isConfigMode) configMode();
     else normalMode();
 }
