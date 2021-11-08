@@ -66,6 +66,11 @@ uint16_t readVCC() {
   return result;
 }
 
+#define SLEEP_PATTERN_8s  0b00100001
+#define SLEEP_PATTERN_4s  0b00100000
+#define SLEEP_PATTERN_2s  0b00000111
+#define SLEEP_PATTERN_1s  0b00000110
+
 void sleep8s() {  
     digitalWrite(13, LOW);                 // turn off LED13 status on-board LED
     unsigned char spi_save = SPCR;
@@ -79,7 +84,7 @@ void sleep8s() {
 
     MCUSR = 0;                          // reset various flags
     WDTCSR |= 0b00011000;               // see docs, set WDCE, WDE
-    WDTCSR =  1 << WDIE | 0b1001;       // set WDIE, and appropriate delay (1024 = 8s)
+    WDTCSR =  (1 << WDIE) | SLEEP_PATTERN_8s;       // set WDIE, and appropriate delay (1024 = 8s)
 
     wdt_reset();
     set_sleep_mode (SLEEP_MODE_PWR_DOWN);  
