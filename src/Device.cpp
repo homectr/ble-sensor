@@ -29,10 +29,12 @@ Device::Device(){
     sensors.add(sensor);
 
     if (isConfigMode) {
+        indicator.setMode(IndicatorMode::CONFIG);
         #ifndef NODEBUG_PRINT
         Serial.println("Config mode");
         #endif
     } else {
+        indicator.setMode(IndicatorMode::NORMAL);
         #ifndef NODEBUG_PRINT
         Serial.println("Normal mode");
         #endif
@@ -90,6 +92,9 @@ void Device::normalMode(){
     
     uint32_t vcc = readVCC();
     buffer.vcc = vcc/33;
+
+    if (vcc<2800) indicator.setError(true);
+    indicator.blink();
 
     #ifndef NODEBUG_PRINT
     Serial.print("[device] ms=");
@@ -159,6 +164,7 @@ void Device::configMode(){
 
 void Device::loop(){
     button.loop();
+    indicator.loop();
     if (isConfigMode) configMode();
     else normalMode();
 }

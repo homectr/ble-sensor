@@ -6,8 +6,11 @@
 #include "RFPacket.h"
 #include "Item.h"
 #include "List.h"
+#include "Indicator.h"
 
 #define BUTTON_PIN      7
+#define LED_PIN_GREEN   8
+#define LED_PIN_RED     6
 
 #define NRF_CE_PIN      9
 #define NRF_CSN_PIN     10
@@ -25,10 +28,13 @@ class Device {
         unsigned long aliveTimer = 0;
 
         InputBinary button = InputBinary(BUTTON_PIN,true);
+        LEDIndicator indicator = LEDIndicator(LED_PIN_GREEN, LED_PIN_RED);
+
         RF24 radio = RF24(NRF_CE_PIN,NRF_CSN_PIN);
         RFSensorPacket buffer;
 
         List<Sensor> sensors = List<Sensor>();
+        
 
     protected: 
         uint16_t getDeviceId();
