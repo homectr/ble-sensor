@@ -3,7 +3,7 @@
 #include "utils.h"
 
 Device::Device(){
-    deviceId = getDeviceId();
+    deviceId = getDeviceId();    
     button.loop();
     isConfigMode = !button.isOpen();
     radio.begin();
@@ -19,24 +19,46 @@ Device::Device(){
     radio.startListening();
 
     #ifndef NODEBUG_PRINT
-    radio.printPrettyDetails();
+    //radio.printPrettyDetails();
     #endif
 
     buffer.srcAdr = deviceId; 
     buffer.srcAdr <<= 16; // deviceId is in two uppoer bytes
 
-    Sensor *sensor = new SensorTempDHT21(0x0001,8);
-    sensors.add(sensor);
+    #ifndef NODEBUG_PRINT
+    Serial.print("Adding sensors: ");
+    #endif
+
+    DHT_Unified *dht = new DHT_Unified(3, DHT11);
+    dht->begin();
+
+    Sensor *s;
+    s = new SensorDHTTemp(0x0001,dht);
+    sensors.add(s);
+    #ifndef NODEBUG_PRINT
+    Serial.print(" DHT-Temperature");
+    #endif
+
+    s = new SensorDHTHumidity(0x0002,dht);
+    sensors.add(s);
+    #ifndef NODEBUG_PRINT
+    Serial.print(" DHT-Humidity");
+    #endif
+
+    #ifndef NODEBUG_PRINT
+    Serial.println();
+    #endif
+
 
     if (isConfigMode) {
         indicator.setMode(IndicatorMode::CONFIG);
         #ifndef NODEBUG_PRINT
-        Serial.println("Config mode");
+        Serial.println(">>> Config mode");
         #endif
     } else {
         indicator.setMode(IndicatorMode::NORMAL);
         #ifndef NODEBUG_PRINT
-        Serial.println("Normal mode");
+        Serial.println(">>> Normal mode");
         #endif
     }
 
@@ -168,6 +190,10 @@ void Device::loop(){
         #ifndef NODEBUG_PRINT
         Serial.println("Rebooting");
         #endif
+        for(int i=0;i<20;i++){
+            indicator.blink();
+            delay(100);
+        }
         reboot();
     }
     indicator.loop();

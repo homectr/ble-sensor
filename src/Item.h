@@ -1,6 +1,7 @@
 #pragma once
 
 #include "RFPacket.h"
+#include <DHT_U.h>
 
 class Item {
 
@@ -26,11 +27,20 @@ class Sensor: public Item {
     
 };
 
-class SensorTempDHT21: public Sensor {
+class SensorDHTTemp: public Sensor {
     protected:
-        uint8_t pin;
+        DHT_Unified *dht;
 
     public:
-        SensorTempDHT21(uint16_t itemId, uint8_t pin);
+        SensorDHTTemp(uint16_t itemId, DHT_Unified* dht);
+        void read(RFSensorPacket& packet) override;
+};
+
+class SensorDHTHumidity: public Sensor {
+    protected:
+        DHT_Unified *dht;
+
+    public:
+        SensorDHTHumidity(uint16_t itemId, DHT_Unified* dht);
         void read(RFSensorPacket& packet) override;
 };
