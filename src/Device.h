@@ -27,10 +27,6 @@
 #define RF24BR_BRIDGE_ADDRESS       0xB1B2B3B401LL
 #define RF24BR_ACTUATOR_ADDRESS     0xA1A2A3A4A5LL
 
-
-
-#define DEEP_SLEEP_INTERVAL_MULTIPLE    1
-
 class Device {
     protected:
         bool isConfigMode = false;
@@ -44,7 +40,6 @@ class Device {
         RFSensorPacket buffer;
 
         List<Sensor> sensors = List<Sensor>();
-        
 
     protected: 
         uint16_t getDeviceId();

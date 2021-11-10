@@ -1,6 +1,7 @@
 #include "Device.h"
 #include <EEPROM.h>
 #include "utils.h"
+#include <avr/sleep.h>
 
 Device::Device(){
     // get device id from flashmem, if non is found, then create one
@@ -126,8 +127,12 @@ void Device::sendBuffer(){
     radio.startListening();
 }
 
- void Int0ISR(void){
-     detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN));
+volatile uint8_t interrupted;
+
+void Int0ISR(void){
+    sleep_disable();
+    detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN));
+    interrupted = 1;
  }
 
 void Device::normalMode(){
@@ -166,6 +171,7 @@ void Device::normalMode(){
     Serial.println("[device] ...going to sleep");
     #endif
 
+    EIFR = 1; // clear old event from interrupt 0
     // attach to external interrupt
     // check MCU documentation to see which pin is INT0
     attachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN), Int0ISR, CHANGE);
@@ -174,9 +180,20 @@ void Device::normalMode(){
     // powerdown radio
     radio.powerDown();
 
+    #define DEEP_SLEEP_INTERVAL_MULTIPLE    2
     // sleep
-    for (int i=0; i < DEEP_SLEEP_INTERVAL_MULTIPLE; i++) sleep(SleepDuration::DUR_8s);  // sleep 8 seconds
-    // delay(1000); // artificial delay for testing
+    for (int i=0; i < DEEP_SLEEP_INTERVAL_MULTIPLE; i++) {
+        sleep(SleepDuration::DUR_8s);  // sleep 8 seconds
+        if (interrupted) {
+            #ifndef NODEBUG_PRINT
+            Serial.println("[device] sleep interrupted");
+            #endif
+
+            break;
+        }
+        interrupted = 0;
+        // delay(1000); // artificial delay for testing
+    }
 }
 
 void Device::configMode(){
