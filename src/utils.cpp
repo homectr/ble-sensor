@@ -67,7 +67,6 @@ uint16_t readVCC() {
 }
 
 void sleep(SleepDuration sleepDur) {  
-    digitalWrite(13, LOW);                 // turn off LED13 status on-board LED
     unsigned char spi_save = SPCR;
     SPCR = 0;                // disable SPI
     power_adc_disable();
@@ -84,11 +83,6 @@ void sleep(SleepDuration sleepDur) {
     wdt_reset();
     set_sleep_mode (SLEEP_MODE_PWR_DOWN);  
     sleep_mode();            // now goes to Sleep and waits for the interrupt
-
-    sleep_disable();         // first thing after waking from sleep: disable sleep...    
-    detachInterrupt(1);      // disables interrupt 1 on pin 3 so the 
-                             // wakeUpNow code will not be executed 
-                             // during normal running time.
     power_all_enable();
     SPCR = spi_save;            // restore SPI
 }

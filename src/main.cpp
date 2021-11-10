@@ -15,11 +15,6 @@ void setup() {
     device = new Device();
 }
 
-// watchdog interrupt
-ISR(WDT_vect){
-    wdt_disable();  // disable watchdog
-}
-
 void loop() {
     device->loop();
 }
