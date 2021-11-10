@@ -66,6 +66,10 @@ uint16_t readVCC() {
   return result;
 }
 
+ISR(WDT_vect){
+    wdt_disable();
+}
+
 void sleep(SleepDuration sleepDur) {  
     unsigned char spi_save = SPCR;
     SPCR = 0;                // disable SPI
