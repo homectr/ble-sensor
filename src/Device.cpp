@@ -150,6 +150,10 @@ void Device::normalMode(){
     #endif
 
     // send measurements from all sensors
+    #ifndef NODEBUG_PRINT
+    Serial.println("[device] Reading sensors:");
+    #endif
+
     ListEntry<Sensor>* i = sensors.getList();
     while (i) {
         i->entry->read(buffer);

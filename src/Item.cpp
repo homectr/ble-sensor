@@ -39,7 +39,7 @@ void SensorDHTTemp::read(RFSensorPacket& packet){
     }
     else {
         #ifndef NODEBUG_PRINT
-        Serial.print(F("Temperature: "));
+        Serial.print(F("  Temperature: "));
         Serial.print(event.temperature);
         Serial.println(F("°C"));
         #endif
@@ -66,7 +66,7 @@ void SensorDHTHumidity::read(RFSensorPacket& packet){
     }
     else {
         #ifndef NODEBUG_PRINT
-        Serial.print(F("Humidity: "));
+        Serial.print(F("  Humidity: "));
         Serial.print(event.relative_humidity);
         Serial.println(F("%"));
         #endif
@@ -86,7 +86,7 @@ void SensorContact::read(RFSensorPacket& packet){
     initPacket(packet);
     String v = String(!digitalRead(pin));
     #ifndef NODEBUG_PRINT
-    Serial.print(F("Contact "));
+    Serial.print(F("  Contact: "));
     Serial.println(v);
     #endif
 
