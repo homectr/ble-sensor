@@ -2,10 +2,16 @@
 #include <EEPROM.h>
 #include "utils.h"
 
+#define EXTERNAL_INTERRUPT_PIN  2
+
 Device::Device(){
     deviceId = getDeviceId();    
+    
+    pinMode(EXTERNAL_INTERRUPT_PIN, INPUT_PULLUP); // initialize pin for external interrupts
+
     button.loop();
     isConfigMode = !button.isOpen();
+    
     radio.begin();
 
     radio.setAutoAck(false); // disable auto-ack from receivers
@@ -16,7 +22,7 @@ Device::Device(){
     radio.setDataRate(RF24_250KBPS); // set datarate to 250kbps to enhance range
     radio.openWritingPipe(RF24BR_BRIDGE_ADDRESS);
     radio.openReadingPipe(0,RF24BR_ACTUATOR_ADDRESS);
-    radio.startListening();
+    radio.stopListening();
 
     #ifndef NODEBUG_PRINT
     //radio.printPrettyDetails();
@@ -29,7 +35,7 @@ Device::Device(){
     Serial.print("Adding sensors: ");
     #endif
 
-    DHT_Unified *dht = new DHT_Unified(3, DHT11);
+    DHT_Unified *dht = new DHT_Unified(4, DHT11);
     dht->begin();
 
     Sensor *s;
@@ -44,6 +50,13 @@ Device::Device(){
     #ifndef NODEBUG_PRINT
     Serial.print(" DHT-Humidity");
     #endif
+
+    s = new SensorContact(0x0003,5);
+    sensors.add(s);
+    #ifndef NODEBUG_PRINT
+    Serial.print(" Contact");
+    #endif
+
 
     #ifndef NODEBUG_PRINT
     Serial.println();
@@ -109,6 +122,13 @@ void Device::sendBuffer(){
     radio.startListening();
 }
 
+ void Int0ISR(void){
+     detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN));
+     #ifndef NODEBUG_PRINT
+     Serial.println("Interrup0");
+     #endif
+ }
+
 void Device::normalMode(){
     radio.powerUp();
     
@@ -139,15 +159,23 @@ void Device::normalMode(){
 
     #ifndef NODEBUG_PRINT
     Serial.println("[device] ...going to sleep");
-    delay(20);
     #endif
 
+    // attach to external interrupt
+    // check MCU documentation to see which pin is INT0
+    attachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN), Int0ISR, CHANGE);
+    delay(20);
+
+    // powerdown radio
     radio.powerDown();
+
+    // sleep
     for (int i=0; i < DEEP_SLEEP_INTERVAL_MULTIPLE; i++) sleep(SleepDuration::DUR_8s);  // sleep 8 seconds
     // delay(1000); // artificial delay for testing
 }
 
 void Device::configMode(){
+    radio.startListening();
     #ifndef NODEBUG_PRINT
     if (millis()-aliveTimer>5000 ){
         aliveTimer = millis();
@@ -181,6 +209,20 @@ void Device::configMode(){
             }
             
         }
+        if (p.pktType == RFPacketType::IDENTIFY){
+            #ifndef NODEBUG_PRINT
+            Serial.println("Identification request reeceived");
+            #endif
+
+            if ((p.dstAdr && 0xFFFF0000) == (buffer.srcAdr && 0xFFFF0000)) { // packet is for this device
+                #ifndef NODEBUG_PRINT
+                Serial.println("Identification begins");
+                #endif
+
+                indicator.setMode(IndicatorMode::IDENTIFICATION,15000);
+            }            
+        }
+
     }
 }
 

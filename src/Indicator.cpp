@@ -2,6 +2,8 @@
 
 #define LED_ON_PERIOD    200
 
+//#define NODEBUG_PRINT
+
 LEDIndicator::LEDIndicator(uint8_t greenPin, uint8_t redPin){
     this->greenPin=greenPin; 
     this->redPin=redPin;
@@ -13,8 +15,8 @@ LEDIndicator::LEDIndicator(uint8_t greenPin, uint8_t redPin){
 }
 
 void LEDIndicator::on(){
-    if (isError) digitalWrite(redPin,1);
-    else digitalWrite(greenPin,1);
+    if (useRed || isError) digitalWrite(redPin,1);
+    if (useGreen) digitalWrite(greenPin,1);
     isOn=true;
 }
 
@@ -24,18 +26,36 @@ void LEDIndicator::off(){
     isOn=false;
 }
 
-void LEDIndicator::setMode(IndicatorMode mode){
+void LEDIndicator::setMode(IndicatorMode mode, uint32_t timeout){
+    if (mode == this->mode) return;
+    modeTimeout = timeout;
+    if (timeout > 0) {
+        previousMode = this->mode;
+        modeTimer = millis();
+        #ifndef NODEBUG_PRINT
+        Serial.print("Mode timeout ");
+        Serial.print(modeTimeout);
+        Serial.print("Prev Mode ");
+        Serial.print(previousMode);
+
+        #endif
+    }
     this->mode = mode;
     switch (this->mode) {
     case IndicatorMode::NORMAL:
         ledOffPeriod = 2000;
-        
+        useGreen = true;
+        useRed = false;
         break;
     case IndicatorMode::CONFIG:
-        ledOffPeriod = 1000;
+        ledOffPeriod = 700;
+        useGreen = true;
+        useRed = false;
         break;
-    case IndicatorMode::PAIRING:
-        ledOffPeriod = 300;
+    case IndicatorMode::IDENTIFICATION:
+        ledOffPeriod = 100;
+        useGreen = true;
+        useRed = true;
         break;
     
     default:
@@ -52,6 +72,10 @@ void LEDIndicator::blink(){
 }
 
 void LEDIndicator::loop(){
+    if (modeTimeout) {
+        if (millis()-modeTimer > modeTimeout)
+            setMode(previousMode);
+    }
     if (millis()-ledTimer > ledTimeout){
         ledTimer = millis();
         if (isOn) {
