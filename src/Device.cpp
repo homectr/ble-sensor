@@ -2,16 +2,18 @@
 #include <EEPROM.h>
 #include "utils.h"
 
-#define EXTERNAL_INTERRUPT_PIN  2
-
 Device::Device(){
-    deviceId = getDeviceId();    
+    // get device id from flashmem, if non is found, then create one
+    deviceId = getDeviceId();
     
-    pinMode(EXTERNAL_INTERRUPT_PIN, INPUT_PULLUP); // initialize pin for external interrupts
+    // initialize pin for external interrupts
+    pinMode(EXTERNAL_INTERRUPT_PIN, INPUT_PULLUP);
 
-    button.loop();
+    // check button during startup
+    button.loop(); // loop must be run in order to read value
     isConfigMode = !button.isOpen();
     
+    // initialize nrf24 radio
     radio.begin();
 
     radio.setAutoAck(false); // disable auto-ack from receivers
@@ -28,6 +30,7 @@ Device::Device(){
     //radio.printPrettyDetails();
     #endif
 
+    // initialize buffer's source address with device id
     buffer.srcAdr = deviceId; 
     buffer.srcAdr <<= 16; // deviceId is in two uppoer bytes
 
@@ -35,7 +38,8 @@ Device::Device(){
     Serial.print("Adding sensors: ");
     #endif
 
-    DHT_Unified *dht = new DHT_Unified(4, DHT11);
+    // create DHT11 sensor
+    DHT_Unified *dht = new DHT_Unified(DHT11_PIN, DHT11);
     dht->begin();
 
     Sensor *s;
@@ -51,7 +55,7 @@ Device::Device(){
     Serial.print(" DHT-Humidity");
     #endif
 
-    s = new SensorContact(0x0003,5);
+    s = new SensorContact(0x0003, CONTACT_PIN);
     sensors.add(s);
     #ifndef NODEBUG_PRINT
     Serial.print(" Contact");
@@ -124,9 +128,6 @@ void Device::sendBuffer(){
 
  void Int0ISR(void){
      detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN));
-     #ifndef NODEBUG_PRINT
-     Serial.println("Interrup0");
-     #endif
  }
 
 void Device::normalMode(){

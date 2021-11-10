@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 enum IndicatorMode: uint8_t {
+    UNDEFINED,
     NORMAL,
     CONFIG,
     IDENTIFICATION
@@ -16,13 +17,13 @@ class LEDIndicator {
     bool useRed = false;
 
     bool isError = false;
-    IndicatorMode mode = IndicatorMode::NORMAL;
-    IndicatorMode previousMode = IndicatorMode::NORMAL;
-    uint32_t modeTimer;
+    IndicatorMode mode = IndicatorMode::UNDEFINED;
+    IndicatorMode previousMode = IndicatorMode::UNDEFINED;
+    uint32_t modeTimer = 0;
     uint32_t modeTimeout;
-    uint32_t ledOffPeriod;
-    uint32_t ledTimer;
-    uint32_t ledTimeout;
+    uint32_t ledOffPeriod = 0;
+    uint32_t ledTimer = 0 ;
+    uint32_t ledTimeout = 0;
     bool isOn = false;
 
     public:

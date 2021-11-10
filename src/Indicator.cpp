@@ -2,7 +2,7 @@
 
 #define LED_ON_PERIOD    200
 
-//#define NODEBUG_PRINT
+#define NODEBUG_PRINT
 
 LEDIndicator::LEDIndicator(uint8_t greenPin, uint8_t redPin){
     this->greenPin=greenPin; 
@@ -76,7 +76,7 @@ void LEDIndicator::loop(){
         if (millis()-modeTimer > modeTimeout)
             setMode(previousMode);
     }
-    if (millis()-ledTimer > ledTimeout){
+    if (ledTimeout && millis()-ledTimer > ledTimeout){
         ledTimer = millis();
         if (isOn) {
             off();
