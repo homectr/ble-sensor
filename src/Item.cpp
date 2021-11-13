@@ -25,6 +25,7 @@ void Sensor::announce(RFSensorPacket& packet){
 SensorDHTTemp::SensorDHTTemp(uint16_t itemId, DHT_Unified *dht):Sensor(itemId){
     this->itemType = RFSensorType::TEMPERATURE;
     this->dht = dht;
+    reqInitTime = 1; // requires at least 2s to be powered before reading
 }
 
 void SensorDHTTemp::read(RFSensorPacket& packet){
@@ -39,7 +40,9 @@ void SensorDHTTemp::read(RFSensorPacket& packet){
     }
     else {
         #ifndef NODEBUG_PRINT
-        Serial.print(F("  Temperature: "));
+        Serial.print(F("  0x"));
+        Serial.print(getId(),HEX);
+        Serial.print(F(" Temperature: "));
         Serial.print(event.temperature);
         Serial.println(F("°C"));
         #endif
@@ -51,6 +54,7 @@ void SensorDHTTemp::read(RFSensorPacket& packet){
 SensorDHTHumidity::SensorDHTHumidity(uint16_t itemId, DHT_Unified* dht):Sensor(itemId){
     this->itemType = RFSensorType::HUMIDITY;
     this->dht = dht;
+    reqInitTime = 1; // requires at least 2s to be powered before reading
 }
 
 void SensorDHTHumidity::read(RFSensorPacket& packet){
@@ -66,7 +70,9 @@ void SensorDHTHumidity::read(RFSensorPacket& packet){
     }
     else {
         #ifndef NODEBUG_PRINT
-        Serial.print(F("  Humidity: "));
+        Serial.print(F("  0x"));
+        Serial.print(getId(),HEX);
+        Serial.print(F(" Humidity: "));
         Serial.print(event.relative_humidity);
         Serial.println(F("%"));
         #endif
@@ -86,7 +92,9 @@ void SensorContact::read(RFSensorPacket& packet){
     initPacket(packet);
     String v = String(!digitalRead(pin));
     #ifndef NODEBUG_PRINT
-    Serial.print(F("  Contact: "));
+    Serial.print(F("  0x"));
+    Serial.print(getId(),HEX);
+    Serial.print(F(" Contact: "));
     Serial.println(v);
     #endif
 

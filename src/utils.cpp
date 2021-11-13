@@ -1,8 +1,4 @@
 #include "utils.h"
-#include <EEPROM.h>
-#include <avr/sleep.h>
-#include <avr/power.h>
-#include <avr/wdt.h>
 
 uint16_t rng16(uint16_t seed=0)
 {
@@ -64,31 +60,6 @@ uint16_t readVCC() {
   result |= ADCH<<8;
   result = 1126400L / result; // Back-calculate AVcc in mV
   return result;
-}
-
-ISR(WDT_vect){
-    wdt_disable();
-}
-
-void sleep(SleepDuration sleepDur) {  
-    unsigned char spi_save = SPCR;
-    SPCR = 0;                // disable SPI
-    power_adc_disable();
-    power_spi_disable();
-    power_timer0_disable();
-    power_timer1_disable();
-    power_timer2_disable();
-    power_twi_disable(); 
-
-    MCUSR = 0;                          // reset various flags
-    WDTCSR |= 0b00011000;               // see docs, set WDCE, WDE
-    WDTCSR =  (1 << WDIE) | sleepDur;   // set WDIE, and appropriate delay
-
-    wdt_reset();
-    set_sleep_mode (SLEEP_MODE_PWR_DOWN);  
-    sleep_mode();            // now goes to Sleep and waits for the interrupt
-    power_all_enable();
-    SPCR = spi_save;            // restore SPI
 }
 
 void reboot() {

@@ -8,10 +8,14 @@ class Item {
     protected: 
         uint16_t itemId;
         RFSensorType itemType;
+        uint8_t reqInitTime = 0;
 
     public:
         Item(uint16_t itemId);
         virtual void announce(RFSensorPacket& packet)=0;
+        uint8_t requiresInitTime(){return reqInitTime;};
+        uint16_t getId(){return itemId;};
+        RFSensorType getType(){return itemType;};
 };
 
 class Sensor: public Item {
@@ -23,6 +27,7 @@ class Sensor: public Item {
         Sensor(uint16_t itemId);
         virtual void read(RFSensorPacket& packet)=0;
         void announce(RFSensorPacket& packet) override;
+        
 };
 
 class SensorDHTTemp: public Sensor {

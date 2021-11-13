@@ -2,6 +2,10 @@
 #include <EEPROM.h>
 #include "utils.h"
 #include <avr/sleep.h>
+#include <avr/wdt.h>
+#include <avr/power.h>
+
+volatile uint8_t interrupted; // device was interrupted from sleep
 
 Device::Device(){
     // get device id from flashmem, if non is found, then create one
@@ -9,6 +13,10 @@ Device::Device(){
     
     // initialize pin for external interrupts
     pinMode(EXTERNAL_INTERRUPT_PIN, INPUT_PULLUP);
+
+    // initializ pin managing perpheral power switch
+    pinMode(PERIPH_POWER_PIN, OUTPUT);
+    connectPeripherals();
 
     // check button during startup
     button.loop(); // loop must be run in order to read value
@@ -36,7 +44,7 @@ Device::Device(){
     buffer.srcAdr <<= 16; // deviceId is in two uppoer bytes
 
     #ifndef NODEBUG_PRINT
-    Serial.print("Adding sensors: ");
+    Serial.println("Adding sensors: ");
     #endif
 
     // create DHT11 sensor
@@ -47,26 +55,26 @@ Device::Device(){
     s = new SensorDHTTemp(0x0001,dht);
     sensors.add(s);
     #ifndef NODEBUG_PRINT
-    Serial.print(" DHT-Temperature");
+    Serial.print(" 0x");
+    Serial.print(s->getId(),HEX);
+    Serial.println(" DHT-Temperature");
     #endif
 
     s = new SensorDHTHumidity(0x0002,dht);
     sensors.add(s);
     #ifndef NODEBUG_PRINT
-    Serial.print(" DHT-Humidity");
+    Serial.print(" 0x");
+    Serial.print(s->getId(),HEX);
+    Serial.println(" DHT-Humidity");
     #endif
 
     s = new SensorContact(0x0003, CONTACT_PIN);
     sensors.add(s);
     #ifndef NODEBUG_PRINT
-    Serial.print(" Contact");
+    Serial.print(" 0x");
+    Serial.print(s->getId(),HEX);
+    Serial.println(" Contact");
     #endif
-
-
-    #ifndef NODEBUG_PRINT
-    Serial.println();
-    #endif
-
 
     if (isConfigMode) {
         indicator.setMode(IndicatorMode::CONFIG);
@@ -79,6 +87,11 @@ Device::Device(){
         Serial.println(">>> Normal mode");
         #endif
     }
+
+    #ifndef NODEBUG_PRINT
+    Serial.println("Waiting for peripherals to settle");
+    #endif
+    delay(10000);
 
 }
 
@@ -127,13 +140,63 @@ void Device::sendBuffer(){
     radio.startListening();
 }
 
-volatile uint8_t interrupted;
-
 void Int0ISR(void){
     sleep_disable();
     detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN));
     interrupted = 1;
  }
+
+ISR(WDT_vect){
+    sleep_disable();
+    wdt_disable();
+}
+
+enum SleepDuration: unsigned char {
+    DUR_8s = 0b00100001,
+    DUR_4s = 0b00100000,
+    DUR_2s = 0b00000111,
+    DUR_1s = 0b00000110
+};
+
+void Device::sleep(uint16_t multiple8) {  
+    unsigned char spi_save = SPCR;
+    SPCR = 0;                // disable SPI
+    power_adc_disable();
+    power_spi_disable();
+    power_timer1_disable();
+    power_timer2_disable();
+    power_twi_disable(); 
+
+    EIFR = 1; // clear old event from interrupt 0
+    // attach to external interrupt
+    // check MCU documentation to see which pin is INT0
+    attachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN), Int0ISR, CHANGE);
+    interrupted = 0;
+
+    for (uint16_t i=multiple8; i>0; i--){
+        #ifndef NODEBUG_PRINT
+        if (i%10==0) Serial.println(".");
+        else Serial.print(".");
+        delay(10);
+        #endif
+        if (i==1)
+            connectPeripherals();     // connect peripherals for the last few seconds, so they can initalize
+        MCUSR = 0;                          // reset various flags
+        WDTCSR |= 0b00011000;               // see docs, set WDCE, WDE
+        WDTCSR =  (1 << WDIE) | SleepDuration::DUR_8s;   // set WDIE, and appropriate delay
+        wdt_reset();
+        set_sleep_mode (SLEEP_MODE_PWR_DOWN);
+        power_timer0_disable();
+        sleep_mode();            // now goes to Sleep and waits for the interrupt
+        power_timer0_enable();   // enable timer0 to enable delay()
+        if (interrupted) break;
+    }
+    detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN));
+
+    power_all_enable();
+    SPCR = spi_save;            // restore SPI
+}
+
 
 void Device::normalMode(){
     radio.powerUp();
@@ -162,38 +225,33 @@ void Device::normalMode(){
 
     ListEntry<Sensor>* i = sensors.getList();
     while (i) {
-        i->entry->read(buffer);
-        sendBuffer();
+        // do not read sensor if interrupted and it requires initialization time
+        if (!(interrupted && i->entry->requiresInitTime())) {
+            i->entry->read(buffer);
+            sendBuffer();
+        } else {
+            #ifndef NODEBUG_PRINT
+            Serial.print(F("  0x"));
+            Serial.print(i->entry->getId(),HEX);
+            Serial.println(F(" Requires init time"));
+            #endif
+        }
         i = i->next;
     }
 
     #ifndef NODEBUG_PRINT
     Serial.println("[device] ...going to sleep");
-    #endif
-
-    EIFR = 1; // clear old event from interrupt 0
-    // attach to external interrupt
-    // check MCU documentation to see which pin is INT0
-    attachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN), Int0ISR, CHANGE);
     delay(20);
+    #endif
 
     // powerdown radio
     radio.powerDown();
 
-    #define DEEP_SLEEP_INTERVAL_MULTIPLE    2
-    // sleep
-    for (int i=0; i < DEEP_SLEEP_INTERVAL_MULTIPLE; i++) {
-        sleep(SleepDuration::DUR_8s);  // sleep 8 seconds
-        if (interrupted) {
-            #ifndef NODEBUG_PRINT
-            Serial.println("[device] sleep interrupted");
-            #endif
+    // powering down peripherals
+    disconnectPeripherals();
 
-            break;
-        }
-        interrupted = 0;
-        // delay(1000); // artificial delay for testing
-    }
+    // sleep (n-1)x8+4 seconds
+    sleep(40);
 }
 
 void Device::configMode(){
@@ -246,6 +304,24 @@ void Device::configMode(){
         }
 
     }
+}
+
+void Device::disconnectPeripherals(){
+    #ifndef NODEBUG_PRINT
+    Serial.println("Peripherals: power-down");
+    delay(10);
+    #endif
+    digitalWrite(PERIPH_POWER_PIN,0);
+}
+
+
+void Device::connectPeripherals(){
+    #ifndef NODEBUG_PRINT
+    Serial.println("Peripherals: power-up");
+    delay(10);
+    #endif
+
+    digitalWrite(PERIPH_POWER_PIN,1);
 }
 
 void Device::loop(){

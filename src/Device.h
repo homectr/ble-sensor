@@ -10,6 +10,8 @@
 
 #define EXTERNAL_INTERRUPT_PIN  2
 
+#define PERIPH_POWER_PIN   A0
+
 #define DHT11_PIN       4
 
 #define CONTACT_PIN     5
@@ -46,6 +48,12 @@ class Device {
         void sendBuffer();
         void normalMode();
         void configMode();
+        // disconnect external peripherals, e.g. DHT sensor, from power to save batteries
+        void disconnectPeripherals();
+        // connect external peripherals to power
+        void connectPeripherals();
+        // sleep (n-1)x8+4 seconds
+        void sleep(uint16_t multiple);
         
     public:
         Device();
