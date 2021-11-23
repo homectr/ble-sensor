@@ -5,14 +5,16 @@
 #include <avr/wdt.h>
 #include <avr/power.h>
 
-volatile uint8_t interrupted; // device was interrupted from sleep
+volatile uint8_t interruptIINT0; // device was interrupted from sleep by INT0
+volatile uint8_t interruptIINT1; // device was interrupted from sleep by INT1
 
 Device::Device(){
     // get device id from flashmem, if non is found, then create one
     deviceId = getDeviceId();
     
     // initialize pin for external interrupts
-    pinMode(EXTERNAL_INTERRUPT_PIN, INPUT_PULLUP);
+    pinMode(EXTERNAL_INTERRUPT0_PIN, INPUT_PULLUP);
+    pinMode(EXTERNAL_INTERRUPT1_PIN, INPUT_PULLUP);
 
     // initializ pin managing perpheral power switch
     pinMode(PERIPH_POWER_PIN, OUTPUT);
@@ -142,8 +144,16 @@ void Device::sendBuffer(){
 
 void Int0ISR(void){
     sleep_disable();
-    detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN));
-    interrupted = 1;
+    detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT0_PIN));
+    detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT1_PIN));
+    interruptIINT0 = 1;
+ }
+
+ void Int1ISR(void){
+    sleep_disable();
+    detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT1_PIN));
+    detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT0_PIN));
+    interruptIINT1 = 1;
  }
 
 ISR(WDT_vect){
@@ -167,31 +177,56 @@ void Device::sleep(uint16_t multiple8) {
     power_timer2_disable();
     power_twi_disable(); 
 
-    EIFR = 1; // clear old event from interrupt 0
+    
     // attach to external interrupt
     // check MCU documentation to see which pin is INT0
-    attachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN), Int0ISR, CHANGE);
-    interrupted = 0;
+    EIFR |= 1; // clear old event from interrupt 0
+    attachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT0_PIN), Int0ISR, CHANGE);
+    interruptIINT0 = 0;
+
+    EIFR |= 2; // clear old event from interrupt 1
+    attachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT1_PIN), Int1ISR, CHANGE);
+    interruptIINT1 = 0;
 
     for (uint16_t i=multiple8; i>0; i--){
+
         #ifndef NODEBUG_PRINT
-        if (i%10==0) Serial.println(".");
-        else Serial.print(".");
+        Serial.print(i);
+        Serial.print("  ");
         delay(10);
         #endif
-        if (i==1)
-            connectPeripherals();     // connect peripherals for the last few seconds, so they can initalize
+
+        if (i==1) connectPeripherals();     // connect peripherals for the last few seconds, so they can initalize
+
         MCUSR = 0;                          // reset various flags
         WDTCSR |= 0b00011000;               // see docs, set WDCE, WDE
         WDTCSR =  (1 << WDIE) | SleepDuration::DUR_8s;   // set WDIE, and appropriate delay
         wdt_reset();
         set_sleep_mode (SLEEP_MODE_PWR_DOWN);
         power_timer0_disable();
+
         sleep_mode();            // now goes to Sleep and waits for the interrupt
+
         power_timer0_enable();   // enable timer0 to enable delay()
-        if (interrupted) break;
+
+        if (interruptIINT0) {
+            #ifndef NODEBUG_PRINT
+            Serial.println("Iterrupt 0");
+            delay(10);
+            #endif
+            break;
+        }
+        if (interruptIINT1) {
+            #ifndef NODEBUG_PRINT
+            Serial.println("Iterrupt 1");
+            delay(10);
+            #endif
+            interruptIINT1 = 0;
+            i = 2; // last 8s of sleep
+        }            
     }
-    detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT_PIN));
+    detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT0_PIN));
+    detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT1_PIN));
 
     power_all_enable();
     SPCR = spi_save;            // restore SPI
@@ -226,7 +261,7 @@ void Device::normalMode(){
     ListEntry<Sensor>* i = sensors.getList();
     while (i) {
         // do not read sensor if interrupted and it requires initialization time
-        if (!(interrupted && i->entry->requiresInitTime())) {
+        if (!(interruptIINT0 && i->entry->requiresInitTime())) {
             i->entry->read(buffer);
             sendBuffer();
         } else {

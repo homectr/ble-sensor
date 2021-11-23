@@ -8,7 +8,8 @@
 #include "List.h"
 #include "Indicator.h"
 
-#define EXTERNAL_INTERRUPT_PIN  2
+#define EXTERNAL_INTERRUPT0_PIN  2  // pin to interrupt sleep and immediate measurement without external peripherals
+#define EXTERNAL_INTERRUPT1_PIN  3  // pin to interrupt sleep, powerup external peripherals, wait 8s and measure
 
 #define PERIPH_POWER_PIN   A0
 
