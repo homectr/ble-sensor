@@ -81,8 +81,6 @@ void SensorDHTHumidity::read(RFSensorPacket& packet){
     strcpy((char*)packet.payload,v.c_str());
 }
 
-
-
 SensorContact::SensorContact(uint16_t itemId, uint8_t pin):Sensor(itemId){
     this->pin = pin;
     pinMode(pin, INPUT_PULLUP);

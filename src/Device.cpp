@@ -88,12 +88,12 @@ Device::Device(){
         #ifndef NODEBUG_PRINT
         Serial.println(">>> Normal mode");
         #endif
-    }
 
-    #ifndef NODEBUG_PRINT
-    Serial.println("Waiting for peripherals to settle");
-    #endif
-    delay(10000);
+        #ifndef NODEBUG_PRINT
+        Serial.println("Waiting for peripherals to settle");
+        #endif
+        delay(5000);
+    }   
 
 }
 
