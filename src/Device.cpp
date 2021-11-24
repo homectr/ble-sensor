@@ -235,7 +235,6 @@ void Device::sleep(uint16_t multiple8) {
 
 void Device::announceDevices(){
     ListEntry<Sensor>* i = sensors.getList();
-    buffer.pktType = RFPacketType::ANNOUNCE;
     while (i) {
         i->entry->announce(buffer);
         sendBuffer();

@@ -20,6 +20,7 @@ void Sensor::initPacket(RFSensorPacket& packet){
 
 void Sensor::announce(RFSensorPacket& packet){
     initPacket(packet);
+    packet.pktType = RFPacketType::ANNOUNCE;
 }
 
 SensorDHTTemp::SensorDHTTemp(uint16_t itemId, DHT_Unified *dht):Sensor(itemId){
@@ -82,6 +83,7 @@ void SensorDHTHumidity::read(RFSensorPacket& packet){
 }
 
 SensorContact::SensorContact(uint16_t itemId, uint8_t pin):Sensor(itemId){
+    this->itemType = RFSensorType::CONTACT;
     this->pin = pin;
     pinMode(pin, INPUT_PULLUP);
 }
