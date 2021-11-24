@@ -44,6 +44,8 @@ class Device {
 
         List<Sensor> sensors = List<Sensor>();
 
+        bool _announce = false;
+
     protected: 
         uint16_t getDeviceId();
         void sendBuffer();
@@ -55,6 +57,8 @@ class Device {
         void connectPeripherals();
         // sleep (n-1)x8+4 seconds
         void sleep(uint16_t multiple);
+        void announceDevices();
+        
         
     public:
         Device();

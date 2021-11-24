@@ -223,6 +223,7 @@ void Device::sleep(uint16_t multiple8) {
             #endif
             interruptIINT1 = 0;
             i = 2; // last 8s of sleep
+            _announce = true; // button presssed, device will announce itself
         }            
     }
     detachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT0_PIN));
@@ -232,12 +233,25 @@ void Device::sleep(uint16_t multiple8) {
     SPCR = spi_save;            // restore SPI
 }
 
+void Device::announceDevices(){
+    ListEntry<Sensor>* i = sensors.getList();
+    buffer.pktType = RFPacketType::ANNOUNCE;
+    while (i) {
+        i->entry->announce(buffer);
+        sendBuffer();
+        i = i->next;
+    }
+
+}
+
 
 void Device::normalMode(){
     radio.powerUp();
     
     uint32_t vcc = readVCC();
     buffer.vcc = vcc/33;
+    
+    buffer.pktType = RFPacketType::DATA;
 
     if (vcc<2800) indicator.setError(true);
     indicator.blink();
@@ -273,6 +287,16 @@ void Device::normalMode(){
         }
         i = i->next;
     }
+
+    // if requested, announce sensors
+    if (_announce) {
+        #ifndef NODEBUG_PRINT
+        Serial.println("[device] Announcing sensors:");
+        #endif
+        announceDevices();
+        _announce = false;
+    }
+
 
     #ifndef NODEBUG_PRINT
     Serial.println("[device] ...going to sleep");
@@ -312,16 +336,10 @@ void Device::configMode(){
 
         if (p.pktType == RFPacketType::SCAN){
             memcpy(buffer.payload, p.payload, sizeof(buffer.payload));
-            // announce all sensors
-            ListEntry<Sensor>* i = sensors.getList();
             #ifndef NODEBUG_PRINT
             Serial.println("Announcing sensors");
             #endif
-            while (i) {
-                i->entry->announce(buffer);
-                sendBuffer();
-                i = i->next;
-            }
+            announceDevices();
             
         }
         if (p.pktType == RFPacketType::IDENTIFY){
