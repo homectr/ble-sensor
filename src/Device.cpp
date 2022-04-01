@@ -80,18 +80,12 @@ Device::Device(){
 
     if (isConfigMode) {
         indicator.setMode(IndicatorMode::CONFIG);
-        #ifndef NODEBUG_PRINT
         Serial.println(">>> Config mode");
-        #endif
     } else {
         indicator.setMode(IndicatorMode::NORMAL);
-        #ifndef NODEBUG_PRINT
         Serial.println(">>> Normal mode");
-        #endif
 
-        #ifndef NODEBUG_PRINT
         Serial.println("Waiting for peripherals to settle");
-        #endif
         delay(5000);
     }   
 
@@ -176,7 +170,6 @@ void Device::sleep(uint16_t multiple8) {
     power_timer1_disable();
     power_timer2_disable();
     power_twi_disable(); 
-
     
     // attach to external interrupt
     // check MCU documentation to see which pin is INT0
@@ -210,17 +203,13 @@ void Device::sleep(uint16_t multiple8) {
         power_timer0_enable();   // enable timer0 to enable delay()
 
         if (interruptIINT0) {
-            #ifndef NODEBUG_PRINT
             Serial.println("Iterrupt 0");
             delay(10);
-            #endif
             break;
         }
         if (interruptIINT1) {
-            #ifndef NODEBUG_PRINT
             Serial.println("Iterrupt 1");
             delay(10);
-            #endif
             interruptIINT1 = 0;
             i = 2; // last 8s of sleep
             _announce = true; // button presssed, device will announce itself
@@ -240,7 +229,6 @@ void Device::announceDevices(){
         sendBuffer();
         i = i->next;
     }
-
 }
 
 
@@ -267,9 +255,12 @@ void Device::normalMode(){
     #endif
 
     // send measurements from all sensors
-    #ifndef NODEBUG_PRINT
-    Serial.println("[device] Reading sensors:");
-    #endif
+    Serial.print("Avail memory ");
+    Serial.println(freeMemory());
+
+
+    // send measurements from all sensors
+    Serial.println("Reading sensors");
 
     ListEntry<Sensor>* i = sensors.getList();
     while (i) {
@@ -296,11 +287,8 @@ void Device::normalMode(){
         _announce = false;
     }
 
-
-    #ifndef NODEBUG_PRINT
-    Serial.println("[device] ...going to sleep");
+    Serial.println("Going to sleep...");
     delay(20);
-    #endif
 
     // powerdown radio
     radio.powerDown();
@@ -379,9 +367,7 @@ void Device::connectPeripherals(){
 void Device::loop(){
     button.loop();
     if (!button.isOpen() && button.stateDuration() > 10000) {
-        #ifndef NODEBUG_PRINT
         Serial.println("Rebooting");
-        #endif
         for(int i=0;i<20;i++){
             indicator.blink();
             delay(100);

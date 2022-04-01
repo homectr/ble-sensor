@@ -1,17 +1,13 @@
 #include <avr/wdt.h>
 #include "Device.h"
 
-//#define NODEBUG_PRINT
-
 Device* device;
 
 void setup() {
-    #ifndef NODEBUG_PRINT
     Serial.begin(115200);
     while (!Serial) { }
-    Serial.println("RF24 sensor");
-    #endif
-    delay(1000); 
+    Serial.println("\n*** Starting RF24 sensor");
+    delay(1000);  // delay for user to be able to push button after power-up to start config mode
     device = new Device();
 }
 

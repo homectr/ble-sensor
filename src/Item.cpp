@@ -3,6 +3,8 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 
+#define NODEBUG_PRINT
+
 Item::Item(uint16_t itemId){
     this->itemId = itemId;
 }
@@ -33,6 +35,7 @@ void SensorDHTTemp::read(RFSensorPacket& packet){
     initPacket(packet);
     sensors_event_t event;
     String v = "NaN";
+    Serial.print("  Temp: ");
     dht->temperature().getEvent(&event);
     if (isnan(event.temperature)) {
         #ifndef NODEBUG_PRINT
@@ -49,7 +52,8 @@ void SensorDHTTemp::read(RFSensorPacket& packet){
         #endif
         v = String(event.temperature);
     }
-    strcpy((char*)packet.payload,v.c_str());
+    Serial.println(v);
+    strncpy((char*)packet.payload,v.c_str(),sizeof(packet.payload));
 }
 
 SensorDHTHumidity::SensorDHTHumidity(uint16_t itemId, DHT_Unified* dht):Sensor(itemId){
@@ -63,11 +67,10 @@ void SensorDHTHumidity::read(RFSensorPacket& packet){
     sensors_event_t event;
     String v = "NaN";
     // Get humidity event and print its value.
+    Serial.print("  Humidity: ");
     dht->humidity().getEvent(&event);
     if (isnan(event.relative_humidity)) {
-        #ifndef NODEBUG_PRINT
         Serial.println(F("Error reading humidity!"));
-        #endif
     }
     else {
         #ifndef NODEBUG_PRINT
@@ -79,7 +82,9 @@ void SensorDHTHumidity::read(RFSensorPacket& packet){
         #endif
         v = String(event.relative_humidity);
     }
-    strcpy((char*)packet.payload,v.c_str());
+    Serial.println(v);
+    
+    strncpy((char*)packet.payload,v.c_str(),sizeof(packet.payload));
 }
 
 SensorContact::SensorContact(uint16_t itemId, uint8_t pin):Sensor(itemId){
@@ -91,6 +96,7 @@ SensorContact::SensorContact(uint16_t itemId, uint8_t pin):Sensor(itemId){
 void SensorContact::read(RFSensorPacket& packet){
     initPacket(packet);
     String v = String(!digitalRead(pin));
+    Serial.print("  Contact: ");
     #ifndef NODEBUG_PRINT
     Serial.print(F("  0x"));
     Serial.print(getId(),HEX);
@@ -98,6 +104,7 @@ void SensorContact::read(RFSensorPacket& packet){
     Serial.println(v);
     #endif
 
+    Serial.println(v);
     strcpy((char*)packet.payload,v.c_str());
 }
  

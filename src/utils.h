@@ -13,3 +13,5 @@ uint16_t readVCC();
 
 // restarts Arduino
 void reboot();
+
+int freeMemory();
