@@ -36,3 +36,5 @@
 
 # VSCode Files
 .vscode
+
+*.log

@@ -167,15 +167,7 @@ ISR(WDT_vect)
     wdt_disable();
 }
 
-enum SleepDuration : unsigned char
-{
-    DUR_8s = 0b00100001,
-    DUR_4s = 0b00100000,
-    DUR_2s = 0b00000111,
-    DUR_1s = 0b00000110
-};
-
-void Device::sleep(uint16_t multiple8)
+void Device::sleep(uint16_t sleepCyclesCount)
 {
     unsigned char spi_save = SPCR;
     SPCR = 0; // disable SPI
@@ -195,7 +187,7 @@ void Device::sleep(uint16_t multiple8)
     attachInterrupt(digitalPinToInterrupt(EXTERNAL_INTERRUPT1_PIN), Int1ISR, CHANGE);
     interruptIINT1 = 0;
 
-    for (uint16_t i = multiple8; i > 0; i--)
+    for (uint16_t i = sleepCyclesCount; i > 0; i--)
     {
 
 #ifndef NODEBUG_PRINT
@@ -204,12 +196,16 @@ void Device::sleep(uint16_t multiple8)
         delay(10);
 #endif
 
+        unsigned char sleepDuration = SLEEP_CYCLE_DURATION;
         if (i == 1)
+        {
+            sleepDuration = SLEEP_DURATION_4s;
             connectPeripherals(); // connect peripherals for the last few seconds, so they can initalize
+        }
 
-        MCUSR = 0;                                    // reset various flags
-        WDTCSR |= 0b00011000;                         // see docs, set WDCE, WDE
-        WDTCSR = (1 << WDIE) | SleepDuration::DUR_8s; // set WDIE, and appropriate delay
+        MCUSR = 0;                            // reset various flags
+        WDTCSR |= 0b00011000;                 // see docs, set WDCE, WDE
+        WDTCSR = (1 << WDIE) | sleepDuration; // set WDIE, and appropriate delay
         wdt_reset();
         set_sleep_mode(SLEEP_MODE_PWR_DOWN);
         power_timer0_disable();
@@ -321,8 +317,8 @@ void Device::normalMode()
     // powering down peripherals
     disconnectPeripherals();
 
-    // sleep (n-1)x8+4 seconds
-    sleep(40);
+    // deep sleep
+    sleep(SLEEP_CYCLES_COUNT);
 }
 
 void Device::configMode()
