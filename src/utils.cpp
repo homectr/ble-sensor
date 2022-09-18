@@ -78,9 +78,6 @@ extern "C" char *sbrk(int incr);
 extern char *__brkval;
 #endif // __arm__
 
-/**
- * Return free memory between stack and heap in bytes
- **/
 int freeMemory()
 {
   char top;
