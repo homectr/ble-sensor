@@ -2,7 +2,8 @@
 
 #include <Arduino.h>
 
-class InputBinary {
+class InputBinary
+{
 
     unsigned char pin;
     bool inverse = false;
@@ -12,9 +13,9 @@ class InputBinary {
     bool _isOpen = true;
     unsigned long stateStart; // when was input opened/closed
 
-    public:
-        InputBinary(unsigned char pin, bool pullup = false);
-        bool isOpen();
-        void loop();
-        unsigned long stateDuration(){return millis()-stateStart;};
+public:
+    InputBinary(unsigned char pin, bool pullup = false);
+    bool isOpen();
+    void loop();
+    unsigned long stateDuration() { return millis() - stateStart; };
 };

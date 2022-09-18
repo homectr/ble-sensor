@@ -2,15 +2,17 @@
 
 #include <Arduino.h>
 
-enum IndicatorMode: uint8_t {
+enum IndicatorMode : uint8_t
+{
     UNDEFINED,
     NORMAL,
     CONFIG,
     IDENTIFICATION
 };
 
-class LEDIndicator {
-    protected:
+class LEDIndicator
+{
+protected:
     uint8_t greenPin;
     uint8_t redPin;
     bool useGreen = false;
@@ -22,13 +24,13 @@ class LEDIndicator {
     uint32_t modeTimer = 0;
     uint32_t modeTimeout;
     uint32_t ledOffPeriod = 0;
-    uint32_t ledTimer = 0 ;
+    uint32_t ledTimer = 0;
     uint32_t ledTimeout = 0;
     bool isOn = false;
 
-    public:
+public:
     LEDIndicator(uint8_t greenPin, uint8_t redPin);
-    void setError(bool error){this->isError = error;};
+    void setError(bool error) { this->isError = error; };
     void setMode(IndicatorMode mode, uint32_t timeout = 0);
     // blocking one-time blink
     void blink();
@@ -36,5 +38,4 @@ class LEDIndicator {
     void loop();
     inline void on();
     inline void off();
-
 };

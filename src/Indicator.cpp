@@ -1,47 +1,56 @@
 #include "Indicator.h"
 
-#define LED_ON_PERIOD    200
+#define LED_ON_PERIOD 200
 
 #define NODEBUG_PRINT
 
-LEDIndicator::LEDIndicator(uint8_t greenPin, uint8_t redPin){
-    this->greenPin=greenPin; 
-    this->redPin=redPin;
-    pinMode(greenPin,OUTPUT);
-    pinMode(redPin,OUTPUT);
+LEDIndicator::LEDIndicator(uint8_t greenPin, uint8_t redPin)
+{
+    this->greenPin = greenPin;
+    this->redPin = redPin;
+    pinMode(greenPin, OUTPUT);
+    pinMode(redPin, OUTPUT);
     ledTimer = millis();
     setMode(IndicatorMode::NORMAL);
     off();
 }
 
-void LEDIndicator::on(){
-    if (useRed || isError) digitalWrite(redPin,1);
-    if (useGreen) digitalWrite(greenPin,1);
-    isOn=true;
+void LEDIndicator::on()
+{
+    if (useRed || isError)
+        digitalWrite(redPin, 1);
+    if (useGreen)
+        digitalWrite(greenPin, 1);
+    isOn = true;
 }
 
-void LEDIndicator::off(){
-    digitalWrite(greenPin,0);
-    digitalWrite(redPin,0);
-    isOn=false;
+void LEDIndicator::off()
+{
+    digitalWrite(greenPin, 0);
+    digitalWrite(redPin, 0);
+    isOn = false;
 }
 
-void LEDIndicator::setMode(IndicatorMode mode, uint32_t timeout){
-    if (mode == this->mode) return;
+void LEDIndicator::setMode(IndicatorMode mode, uint32_t timeout)
+{
+    if (mode == this->mode)
+        return;
     modeTimeout = timeout;
-    if (timeout > 0) {
+    if (timeout > 0)
+    {
         previousMode = this->mode;
         modeTimer = millis();
-        #ifndef NODEBUG_PRINT
+#ifndef NODEBUG_PRINT
         Serial.print("Mode timeout ");
         Serial.print(modeTimeout);
         Serial.print("Prev Mode ");
         Serial.print(previousMode);
 
-        #endif
+#endif
     }
     this->mode = mode;
-    switch (this->mode) {
+    switch (this->mode)
+    {
     case IndicatorMode::NORMAL:
         ledOffPeriod = 2000;
         useGreen = true;
@@ -57,7 +66,7 @@ void LEDIndicator::setMode(IndicatorMode mode, uint32_t timeout){
         useGreen = true;
         useRed = true;
         break;
-    
+
     default:
         break;
     }
@@ -65,23 +74,30 @@ void LEDIndicator::setMode(IndicatorMode mode, uint32_t timeout){
     off();
 }
 
-void LEDIndicator::blink(){
+void LEDIndicator::blink()
+{
     on();
     delay(LED_ON_PERIOD);
     off();
 }
 
-void LEDIndicator::loop(){
-    if (modeTimeout) {
-        if (millis()-modeTimer > modeTimeout)
+void LEDIndicator::loop()
+{
+    if (modeTimeout)
+    {
+        if (millis() - modeTimer > modeTimeout)
             setMode(previousMode);
     }
-    if (ledTimeout && millis()-ledTimer > ledTimeout){
+    if (ledTimeout && millis() - ledTimer > ledTimeout)
+    {
         ledTimer = millis();
-        if (isOn) {
+        if (isOn)
+        {
             off();
             ledTimeout = ledOffPeriod;
-        } else {
+        }
+        else
+        {
             on();
             ledTimeout = LED_ON_PERIOD;
         }
