@@ -148,7 +148,7 @@ void Device::sendBuffer()
         Serial.print(i + 1);
 #endif
         radio.writeFast(&buffer, sizeof(buffer));
-        delay(10);
+        delay(100);
     }
     radio.startListening();
 #ifndef NODEBUG_PRINT
