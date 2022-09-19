@@ -134,15 +134,26 @@ uint16_t Device::getDeviceId()
 
 void Device::sendBuffer()
 {
+#ifndef NODEBUG_PRINT
+    Serial.print("memory ");
+    Serial.println(freeMemory());
+    Serial.print("  > Transmitting data...");
+#endif
     radio.stopListening();
     buffer.seqno = millis();
 
     for (int i = 0; i < 3; i++)
     {
+#ifndef NODEBUG_PRINT
+        Serial.print(i + 1);
+#endif
         radio.writeFast(&buffer, sizeof(buffer));
         delay(10);
     }
     radio.startListening();
+#ifndef NODEBUG_PRINT
+    Serial.println(" done.");
+#endif
 }
 
 void Int0ISR(void)
