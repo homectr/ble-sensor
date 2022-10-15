@@ -5,6 +5,8 @@
 #include <avr/wdt.h>
 #include <avr/power.h>
 
+#define NODEBUG_PRINT
+
 volatile uint8_t interruptIINT0; // device was interrupted from sleep by INT0
 volatile uint8_t interruptIINT1; // device was interrupted from sleep by INT1
 
@@ -39,7 +41,7 @@ Device::Device()
     radio.stopListening();
 
 #ifndef NODEBUG_PRINT
-// radio.printPrettyDetails();
+    radio.printPrettyDetails();
 #endif
 
     // initialize buffer's source address with device id
